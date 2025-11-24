@@ -53,7 +53,22 @@ struct SignUpView: View {
             
             // Register Button
             Button(action: {
-                // TODO: Implement sign up
+                // Create user data
+                var newUser = User(
+                    id: UUID().uuidString,
+                    fullName: fullName,
+                    email: email,
+                    username: fullName.lowercased().replacingOccurrences(of: " ", with: "")
+                )
+                newUser.dateOfBirth = dateOfBirth
+                newUser.phoneNumber = phoneNumber.isEmpty ? nil : phoneNumber
+                
+                viewModel.signUp(userData: newUser)
+                
+                // If sign up successful, dismiss
+                if viewModel.isAuthenticated {
+                    dismiss()
+                }
             }) {
                 Text("Register")
                     .frame(maxWidth: .infinity)
@@ -63,6 +78,14 @@ struct SignUpView: View {
                     .cornerRadius(8)
             }
             .padding(.horizontal)
+            .disabled(fullName.isEmpty || email.isEmpty || password.isEmpty)
+            
+            if let error = viewModel.errorMessage {
+                Text(error)
+                    .foregroundColor(.red)
+                    .font(.caption)
+                    .padding(.horizontal)
+            }
             
             // Login Link
             Button(action: {

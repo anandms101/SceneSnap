@@ -4,10 +4,16 @@
 //
 //  Created by SceneSnap Team
 //
+//  Date extension providing human-readable relative time formatting.
+//  Used for displaying post timestamps in a user-friendly format.
 
 import Foundation
 
 extension Date {
+    /// Returns a human-readable string describing how long ago the date was
+    /// Formats time differences from seconds to years
+    /// - Returns: String like "2 hours ago", "3 days ago", "just now"
+    /// - Example: A date 2 hours ago returns "2 hours ago"
     func timeAgo() -> String {
         let calendar = Calendar.current
         let now = Date()

@@ -14,7 +14,7 @@ struct CommentSectionView: View {
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack {
                 // Comments List
                 ScrollView {
@@ -55,11 +55,21 @@ struct CommentSectionView: View {
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                     
                     Button(action: {
-                        // TODO: Add comment
-                        newComment = ""
+                        if !newComment.isEmpty {
+                            // Create new comment
+                            let comment = Comment(
+                                id: UUID().uuidString,
+                                postId: postId,
+                                userId: AppState.shared.currentUser?.id ?? "unknown",
+                                username: AppState.shared.currentUser?.username ?? "User",
+                                text: newComment
+                            )
+                            comments.append(comment)
+                            newComment = ""
+                        }
                     }) {
                         Text("Post")
-                            .foregroundColor(.blue)
+                            .foregroundColor(newComment.isEmpty ? .gray : .blue)
                     }
                     .disabled(newComment.isEmpty)
                 }
@@ -77,7 +87,8 @@ struct CommentSectionView: View {
             }
         }
         .onAppear {
-            // TODO: Fetch comments
+            // TODO: Fetch comments from Firestore
+            // For now, show empty state
         }
     }
 }
