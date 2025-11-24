@@ -34,10 +34,14 @@ struct SignUpView: View {
                 TextField("Full Name", text: $fullName)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                 
-                TextField("Email", text: $email)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .autocapitalization(.none)
-                    .keyboardType(.emailAddress)
+                VStack(spacing: 6) {
+                    TextField("Email", text: $email)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .autocapitalization(.none)
+                        .keyboardType(.emailAddress)
+                    
+                    ValidationBadge(state: emailState)
+                }
                 
                 DatePicker("Date of birth", selection: $dateOfBirth, displayedComponents: .date)
                     .datePickerStyle(.compact)
@@ -46,8 +50,12 @@ struct SignUpView: View {
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .keyboardType(.phonePad)
                 
-                SecureField("Password", text: $password)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                VStack(spacing: 6) {
+                    SecureField("Password", text: $password)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                    
+                    ValidationBadge(state: passwordState)
+                }
             }
             .padding(.horizontal)
             
@@ -70,13 +78,21 @@ struct SignUpView: View {
                     dismiss()
                 }
             }) {
-                Text("Register")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.yellow)
-                    .foregroundColor(.black)
-                    .cornerRadius(8)
+                HStack {
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .tint(.black)
+                    }
+                    Text("Register")
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(canRegister ? Color.yellow : Color.gray.opacity(0.3))
+                .foregroundColor(.black)
+                .cornerRadius(12)
             }
+            .disabled(!canRegister)
             .padding(.horizontal)
             .disabled(fullName.isEmpty || email.isEmpty || password.isEmpty)
             
@@ -98,9 +114,20 @@ struct SignUpView: View {
             Spacer()
         }
     }
+    
+    private var emailState: ValidationState {
+        viewModel.emailValidationState(for: email)
+    }
+    
+    private var passwordState: ValidationState {
+        viewModel.passwordValidationState(for: password)
+    }
+    
+    private var canRegister: Bool {
+        !fullName.isEmpty && emailState.isValid && passwordState.isValid && !viewModel.isLoading
+    }
 }
 
 #Preview {
     SignUpView()
 }
-

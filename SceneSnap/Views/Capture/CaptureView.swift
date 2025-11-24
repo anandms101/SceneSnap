@@ -4,157 +4,200 @@
 //
 //  Created by SceneSnap Team
 //
-//  Media capture screen for recording videos or selecting from gallery.
-//  Provides camera controls and navigation to post preview.
 
 import SwiftUI
+import UIKit
+import AVKit
 
-/// Media capture screen for creating new posts
-/// Features:
-/// - Video recording with timer display
-/// - Photo/video selection from gallery
-/// - Camera switching (front/back)
-/// - Navigation to post preview after media selection
+private enum PlaybackOverlayState {
+    case hidden
+    case play
+    case pause
+}
+
 struct CaptureView: View {
-    /// ViewModel managing capture state and media handling
     @StateObject private var viewModel = CaptureViewModel()
-    
-    /// Controls presentation of post preview screen
     @State private var showPostPreview: Bool = false
-    
-    /// Environment value for dismissing the view (when presented modally)
-    @Environment(\.dismiss) var dismiss
+    @State private var overlayState: PlaybackOverlayState = .play
     
     var body: some View {
-        NavigationStack {
-            VStack {
-                Text("Recreate your scene")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .padding()
-                
-                // Camera Preview Area
+        GeometryReader { proxy in
+            VStack(spacing: 16) {
                 ZStack {
-                    // Camera preview placeholder (will be replaced with actual camera view)
-                    Rectangle()
-                        .fill(Color.black)
-                        .overlay(
-                            VStack {
-                                // Recording indicator with timer
-                                if viewModel.isRecording {
-                                    HStack {
-                                        Circle()
-                                            .fill(Color.red)
-                                            .frame(width: 12, height: 12)
-                                        Text(formatDuration(viewModel.recordingDuration))
-                                            .foregroundColor(.white)
-                                            .font(.headline)
-                                    }
-                                    .padding()
-                                } else {
-                                    // Status text based on media availability
-                                    Text(viewModel.recordedVideoURL != nil || viewModel.selectedImage != nil ? "Media Ready" : "Video Recording")
+                    if let recordedURL = viewModel.recordedVideoURL {
+                        RecordedVideoPreview(url: recordedURL, overlayState: $overlayState)
+                    } else {
+                        CameraView(session: viewModel.captureSession)
+                            .overlay {
+                                if viewModel.permissionDenied {
+                                    permissionDeniedOverlay()
+                                } else if !viewModel.isSessionRunning {
+                                    ProgressView("Starting camera…")
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                         .foregroundColor(.white)
+                                        .padding()
+                                        .background(Color.black.opacity(0.6))
+                                        .cornerRadius(10)
                                 }
                             }
-                        )
+                    }
                     
-                    // Camera Controls Overlay
-                    VStack {
-                        Spacer()
-                        HStack {
-                            // Gallery upload button
-                            Button(action: {
-                                viewModel.pickFromGallery()
-                            }) {
-                                Text("Upload from gallery")
-                                    .padding()
-                                    .background(Color.yellow)
-                                    .foregroundColor(.black)
-                                    .cornerRadius(8)
-                            }
-                            
-                            Spacer()
-                            
-                            // Record/Stop button - Toggles recording state
-                            Button(action: {
-                                if viewModel.isRecording {
-                                    viewModel.stopRecording()
-                                } else {
-                                    viewModel.startRecording()
+                    if viewModel.recordedVideoURL == nil {
+                        VStack {
+                            HStack {
+                                Button(action: {
+                                    viewModel.switchCamera()
+                                }) {
+                                    Image(systemName: "arrow.triangle.2.circlepath.camera")
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                        .padding(8)
+                                        .background(Color.black.opacity(0.4))
+                                        .clipShape(Circle())
                                 }
-                            }) {
-                                Circle()
-                                    .fill(viewModel.isRecording ? Color.red : Color.white)
-                                    .frame(width: 70, height: 70)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(Color.white, lineWidth: 4)
-                                            .frame(width: 60, height: 60)
-                                    )
-                            }
-                            
-                            Spacer()
-                            
-                            // Camera flip button - Switches between front/back camera
-                            Button(action: {
-                                viewModel.switchCamera()
-                            }) {
-                                Image(systemName: "arrow.triangle.2.circlepath.camera")
-                                    .font(.title)
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .background(Color.gray.opacity(0.5))
-                                    .clipShape(Circle())
-                            }
-                        }
-                        .padding()
-                        
-                        // Continue button - Navigates to post preview when media is ready
-                        Button(action: {
-                            if viewModel.recordedVideoURL != nil || viewModel.selectedImage != nil {
-                                showPostPreview = true
-                            }
-                        }) {
-                            Text("Continue")
-                                .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(viewModel.recordedVideoURL != nil || viewModel.selectedImage != nil ? Color.yellow : Color.gray)
-                                .foregroundColor(.black)
-                                .cornerRadius(8)
+                                
+                                Spacer()
+                                
+                                timerBadge
+                                    .padding()
+                            }
+                            Spacer()
                         }
-                        .disabled(viewModel.recordedVideoURL == nil && viewModel.selectedImage == nil)
+                    }
+                }
+                .frame(height: proxy.size.height - bottomSafeArea(proxy))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .padding(.horizontal)
+                .padding(.top, 8)
+                
+                if let label = videoLabelText {
+                    Text(label)
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal)
-                        .padding(.bottom)
-                    }
                 }
+                
+                controlBar
+                    .padding(.horizontal)
+                
+                Spacer(minLength: bottomSafeArea(proxy))
             }
-            .navigationTitle("Capture")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-            }
-            // Full screen cover for post preview
-            .fullScreenCover(isPresented: $showPostPreview) {
-                PostPreviewView(
-                    mediaURL: viewModel.recordedVideoURL,
-                    selectedImage: viewModel.selectedImage
-                )
+        }
+        .onChange(of: viewModel.recordedVideoURL) { _, _ in
+            overlayState = .play
+        }
+        .task {
+            viewModel.requestCameraPermission()
+        }
+        .fullScreenCover(isPresented: $showPostPreview) {
+            PostPreviewView(
+                mediaURL: viewModel.recordedVideoURL ?? viewModel.selectedVideoURL,
+                selectedImage: nil
+            )
+        }
+        .sheet(isPresented: $viewModel.isShowingVideoPicker) {
+            VideoPicker(isPresented: $viewModel.isShowingVideoPicker) { url in
+                viewModel.handlePickedVideo(url: url)
             }
         }
     }
     
-    /// Formats a time interval into MM:SS string format
-    /// - Parameter duration: Time interval in seconds
-    /// - Returns: Formatted string (e.g., "02:30")
-    private func formatDuration(_ duration: TimeInterval) -> String {
-        let minutes = Int(duration) / 60
-        let seconds = Int(duration) % 60
-        return String(format: "%02d:%02d", minutes, seconds)
+    private var controlBar: some View {
+        HStack(spacing: 16) {
+            Button(action: {
+                showPostPreview = true
+            }) {
+                Text("Continue")
+                    .font(.subheadline.bold())
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.yellow)
+                    .foregroundColor(.black)
+                    .cornerRadius(10)
+            }
+            .disabled(!hasVideoAvailable)
+            .opacity(hasVideoAvailable ? 1.0 : 0.6)
+            
+            Button(action: {
+                viewModel.isRecording ? viewModel.stopRecording() : viewModel.startRecording()
+            }) {
+                Circle()
+                    .fill(viewModel.isRecording ? Color.red : Color.white)
+                    .frame(width: 60, height: 60)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.black.opacity(0.2), lineWidth: 4)
+                    )
+                    .shadow(radius: 3)
+            }
+            
+            Button(action: {
+                viewModel.pickFromGallery()
+            }) {
+                Text("Upload")
+                    .font(.subheadline.bold())
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.yellow)
+                    .foregroundColor(.black)
+                    .cornerRadius(10)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func permissionDeniedOverlay() -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.largeTitle)
+                .foregroundColor(.yellow)
+            Text("Camera access needed")
+                .font(.headline)
+                .foregroundColor(.white)
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 8)
+            .background(Color.yellow)
+            .foregroundColor(.black)
+            .cornerRadius(8)
+        }
+        .padding()
+        .background(Color.black.opacity(0.7))
+        .cornerRadius(12)
+    }
+    
+    private func bottomSafeArea(_ proxy: GeometryProxy) -> CGFloat {
+        proxy.safeAreaInsets.bottom + 60
+    }
+    
+    private var timerBadge: some View {
+        Text(viewModel.formattedDuration)
+            .font(.caption.monospacedDigit())
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .background(Color.black.opacity(0.6))
+            .foregroundColor(.white)
+            .cornerRadius(8)
+    }
+    
+    private var hasVideoAvailable: Bool {
+        viewModel.recordedVideoURL != nil || viewModel.selectedVideoURL != nil
+    }
+    
+    private var videoLabelText: String? {
+        if let recorded = viewModel.recordedVideoURL {
+            return "Recorded: \(recorded.lastPathComponent)"
+        }
+        if let selected = viewModel.selectedVideoURL {
+            return "Selected: \(selected.lastPathComponent)"
+        }
+        return nil
     }
 }
 
@@ -162,3 +205,76 @@ struct CaptureView: View {
     CaptureView()
 }
 
+private struct RecordedVideoPreview: View {
+    let url: URL
+    @Binding var overlayState: PlaybackOverlayState
+    
+    @State private var player: AVPlayer = AVPlayer()
+    @State private var endObserver: NSObjectProtocol?
+    
+    var body: some View {
+        VideoPlayer(player: player)
+            .contentShape(Rectangle())
+            .onAppear {
+                preparePlayer()
+            }
+            .onChange(of: url) { _, _ in
+                preparePlayer()
+            }
+            .onDisappear {
+                cleanup()
+            }
+            .onTapGesture {
+                if overlayState == .hidden {
+                    player.pause()
+                    overlayState = .pause
+                }
+            }
+            .overlay(overlayView)
+    }
+    
+    private var overlayView: some View {
+        Group {
+            if overlayState != .hidden {
+                Button(action: handleOverlayTap) {
+                    Image(systemName: overlayState == .play ? "play.fill" : "pause.fill")
+                        .font(.title)
+                        .foregroundColor(.black)
+                        .padding()
+                        .background(Color.white.opacity(0.85))
+                        .clipShape(Circle())
+                }
+            }
+        }
+    }
+    
+    private func preparePlayer() {
+        cleanup()
+        let item = AVPlayerItem(url: url)
+        player.replaceCurrentItem(with: item)
+        player.pause()
+        overlayState = .play
+        
+        endObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: item,
+            queue: .main
+        ) { _ in
+            player.seek(to: .zero)
+            overlayState = .play
+        }
+    }
+    
+    private func cleanup() {
+        player.pause()
+        if let observer = endObserver {
+            NotificationCenter.default.removeObserver(observer)
+            endObserver = nil
+        }
+    }
+    
+    private func handleOverlayTap() {
+        player.play()
+        overlayState = .hidden
+    }
+}

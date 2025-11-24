@@ -9,16 +9,29 @@ import SwiftUI
 import AVFoundation
 
 struct CameraView: UIViewRepresentable {
-    @Binding var isRecording: Bool
+    let session: AVCaptureSession
     
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView(frame: .zero)
-        // TODO: Implement AVFoundation camera setup
-        return view
+    func makeUIView(context: Context) -> PreviewView {
+        let previewView = PreviewView()
+        previewView.videoPreviewLayer.session = session
+        previewView.videoPreviewLayer.videoGravity = .resizeAspectFill
+        return previewView
     }
     
-    func updateUIView(_ uiView: UIView, context: Context) {
-        // TODO: Update camera view
+    func updateUIView(_ uiView: PreviewView, context: Context) {
+        uiView.videoPreviewLayer.session = session
+    }
+    
+    final class PreviewView: UIView {
+        override class var layerClass: AnyClass {
+            AVCaptureVideoPreviewLayer.self
+        }
+        
+        var videoPreviewLayer: AVCaptureVideoPreviewLayer {
+            guard let layer = layer as? AVCaptureVideoPreviewLayer else {
+                fatalError("Expected AVCaptureVideoPreviewLayer backed view")
+            }
+            return layer
+        }
     }
 }
-
