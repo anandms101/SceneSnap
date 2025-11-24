@@ -26,20 +26,16 @@ struct LoginView: View {
                 .font(.headline)
                 .foregroundColor(.secondary)
             
-            Text("Enter your email and pass. to log in")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-            
             // Test Credentials Info
             VStack(spacing: 8) {
                 Text("For testing (no DB required):")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                Text("Email: test")
+                Text("Email: test@gmail.com")
                     .font(.caption)
                     .foregroundColor(.yellow)
                     .fontWeight(.semibold)
-                Text("Password: test")
+                Text("Password: test@2025")
                     .font(.caption)
                     .foregroundColor(.yellow)
                     .fontWeight(.semibold)
@@ -52,13 +48,21 @@ struct LoginView: View {
             
             // Input Fields
             VStack(spacing: 15) {
-                TextField("Email", text: $email)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .autocapitalization(.none)
-                    .keyboardType(.emailAddress)
+                VStack(spacing: 6) {
+                    TextField("Email", text: $email)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .autocapitalization(.none)
+                        .keyboardType(.emailAddress)
+                    
+                    ValidationBadge(state: emailState)
+                }
                 
-                SecureField("Password", text: $password)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                VStack(spacing: 6) {
+                    SecureField("Password", text: $password)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                    
+                    ValidationBadge(state: passwordState)
+                }
             }
             .padding(.horizontal)
             
@@ -66,13 +70,21 @@ struct LoginView: View {
             Button(action: {
                 viewModel.signIn(email: email, password: password)
             }) {
-                Text("Log in")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.yellow)
-                    .foregroundColor(.black)
-                    .cornerRadius(8)
+                HStack {
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .tint(.black)
+                    }
+                    Text("Log in")
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(canSubmit ? Color.yellow : Color.gray.opacity(0.3))
+                .foregroundColor(.black)
+                .cornerRadius(12)
             }
+            .disabled(!canSubmit)
             .padding(.horizontal)
             
             // Divider
@@ -101,15 +113,33 @@ struct LoginView: View {
             }
             .padding(.horizontal)
             
+            Button(action: { showSignUp = true }) {
+                Text("Need an account? Sign up")
+                    .font(.footnote)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.blue)
+            }
+            
             Spacer()
         }
         .sheet(isPresented: $showSignUp) {
             SignUpView()
         }
     }
+    
+    private var emailState: ValidationState {
+        viewModel.emailValidationState(for: email)
+    }
+    
+    private var passwordState: ValidationState {
+        viewModel.passwordValidationState(for: password)
+    }
+    
+    private var canSubmit: Bool {
+        emailState.isValid && passwordState.isValid && !viewModel.isLoading
+    }
 }
 
 #Preview {
     LoginView()
 }
-
