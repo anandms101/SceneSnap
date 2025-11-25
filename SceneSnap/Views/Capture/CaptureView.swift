@@ -91,8 +91,11 @@ struct CaptureView: View {
         .task {
             viewModel.requestCameraPermission()
         }
-        .sheet(isPresented: $showPostPreview) {
-            PostPreviewView()
+        .fullScreenCover(isPresented: $showPostPreview) {
+            PostPreviewView(
+                mediaURL: viewModel.recordedVideoURL ?? viewModel.selectedVideoURL,
+                selectedImage: nil
+            )
         }
         .sheet(isPresented: $viewModel.isShowingVideoPicker) {
             VideoPicker(isPresented: $viewModel.isShowingVideoPicker) { url in

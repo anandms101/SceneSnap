@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import AVFoundation
+import Combine
 
 class CaptureViewModel: NSObject, ObservableObject {
     @Published var captureSession = AVCaptureSession()

@@ -14,7 +14,7 @@ struct EditProfileView: View {
     @State private var username: String = ""
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section("Profile Information") {
                     TextField("Username", text: $username)
@@ -30,6 +30,16 @@ struct EditProfileView: View {
                             Text("Change Profile Picture")
                             Spacer()
                             Image(systemName: "photo")
+                                .foregroundColor(.blue)
+                        }
+                    }
+                }
+                
+                if let user = viewModel.user {
+                    Section("Current Info") {
+                        Text("Email: \(user.email)")
+                        if let bio = user.bio {
+                            Text("Bio: \(bio)")
                         }
                     }
                 }
@@ -44,10 +54,26 @@ struct EditProfileView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
-                        // TODO: Save profile updates
+                        // Update profile
+                        var updates: [String: Any] = [:]
+                        if !username.isEmpty {
+                            updates["username"] = username
+                        }
+                        if !bio.isEmpty {
+                            updates["bio"] = bio
+                        }
+                        viewModel.updateProfile(updates: updates)
                         dismiss()
                     }
+                    .disabled(username.isEmpty && bio.isEmpty)
                 }
+            }
+        }
+        .onAppear {
+            if let user = AppState.shared.currentUser {
+                username = user.username
+                bio = user.bio ?? ""
+                viewModel.user = user
             }
         }
     }

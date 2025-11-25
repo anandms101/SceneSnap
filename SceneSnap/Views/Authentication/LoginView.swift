@@ -4,13 +4,29 @@
 //
 //  Created by SceneSnap Team
 //
+//  Login screen for user authentication.
+//  Supports email/password login and Google sign-in with navigation to sign up.
 
 import SwiftUI
 
+/// Login screen for user authentication
+/// Features:
+/// - Email and password input fields
+/// - Login button
+/// - Google sign-in option
+/// - Navigation to sign up screen
+/// - Test credentials display for demo purposes
 struct LoginView: View {
+    /// ViewModel managing authentication logic
     @StateObject private var viewModel = AuthViewModel()
+    
+    /// User's email input
     @State private var email: String = ""
+    
+    /// User's password input
     @State private var password: String = ""
+    
+    /// Controls presentation of sign up sheet
     @State private var showSignUp: Bool = false
     
     var body: some View {
@@ -113,12 +129,14 @@ struct LoginView: View {
             }
             .padding(.horizontal)
             
+            // Sign Up Link
             Button(action: { showSignUp = true }) {
                 Text("Need an account? Sign up")
                     .font(.footnote)
                     .fontWeight(.semibold)
                     .foregroundColor(.blue)
             }
+            .padding(.bottom)
             
             Spacer()
         }

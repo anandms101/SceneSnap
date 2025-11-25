@@ -4,11 +4,28 @@
 //
 //  Created by SceneSnap Team
 //
+//  Reusable post card component displaying a single post in the feed.
+//  Shows media, caption, engagement metrics, and provides interaction buttons.
 
 import SwiftUI
 
+/// Card component displaying a single post in the feed
+/// Features:
+/// - User profile picture and username (tappable to view profile)
+/// - Media display (video or image, with side-by-side comparison if original scene exists)
+/// - Caption text
+/// - Like, comment, and share buttons
+/// - Like and comment counts
+/// - Relative timestamp
+/// - Comment section sheet
 struct PostCardView: View {
+    /// The post data to display
     let post: Post
+    
+    /// Callback when username is tapped (navigates to user profile)
+    var onUserTap: (() -> Void)?
+    
+    /// Controls presentation of comment section sheet
     @State private var showComments: Bool = false
     
     var body: some View {
@@ -21,8 +38,13 @@ struct PostCardView: View {
                     .frame(width: 40, height: 40)
                 
                 VStack(alignment: .leading) {
-                    Text(post.username)
-                        .fontWeight(.semibold)
+                    Button(action: {
+                        onUserTap?()
+                    }) {
+                        Text(post.username)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                    }
                     if !post.challengeTag.isEmpty {
                         Text(post.challengeTag)
                             .font(.caption)
@@ -92,7 +114,7 @@ struct PostCardView: View {
             .padding(.horizontal)
             
             // Timestamp
-            Text("2h ago") // TODO: Calculate relative time
+            Text(post.createdAt.timeAgo())
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .padding(.horizontal)

@@ -4,9 +4,14 @@
 //
 //  Created by SceneSnap Team
 //
+//  Challenge model representing a weekly challenge that users can participate in.
+//  Challenges have a time period, description, and track participant count.
 
 import Foundation
 
+/// Represents a weekly challenge that users can participate in
+/// Challenges have a start and end date, and users can submit posts tagged with the challenge
+/// Conforms to Identifiable and Codable for Firestore integration
 struct Challenge: Identifiable, Codable {
     let id: String
     var title: String
@@ -19,6 +24,14 @@ struct Challenge: Identifiable, Codable {
     var createdAt: Date
     var createdBy: String? // Admin user ID who created the challenge
     
+    /// Initializes a new Challenge
+    /// - Parameters:
+    ///   - id: Unique challenge identifier
+    ///   - title: Display title of the challenge
+    ///   - description: Detailed description of the challenge
+    ///   - tag: Short tag used for filtering posts (e.g., "RomComWeek")
+    ///   - startDate: When the challenge begins
+    ///   - endDate: When the challenge ends
     init(id: String, title: String, description: String, tag: String, startDate: Date, endDate: Date) {
         self.id = id
         self.title = title

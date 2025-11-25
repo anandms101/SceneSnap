@@ -4,9 +4,13 @@
 //
 //  Created by SceneSnap Team
 //
+//  Post model representing a user's scene recreation submission.
+//  Contains media (video/photo), caption, challenge association, and engagement metrics.
 
 import Foundation
 
+/// Represents a user's post/recreation of a movie or TV scene
+/// Conforms to Identifiable for SwiftUI list rendering and Codable for Firestore serialization
 struct Post: Identifiable, Codable {
     let id: String
     let userId: String
@@ -27,10 +31,19 @@ struct Post: Identifiable, Codable {
     var createdAt: Date
     var updatedAt: Date
     
+    /// Media type enumeration for posts
+    /// Supports both video and photo recreations
     enum MediaType: String, Codable {
         case video, photo
     }
     
+    /// Initializes a new Post with required fields
+    /// - Parameters:
+    ///   - id: Unique post identifier
+    ///   - userId: ID of the user who created the post
+    ///   - username: Display name of the user
+    ///   - mediaURL: Firebase Storage URL for the recreation media
+    ///   - mediaType: Type of media (video or photo)
     init(id: String, userId: String, username: String, mediaURL: String, mediaType: MediaType) {
         self.id = id
         self.userId = userId

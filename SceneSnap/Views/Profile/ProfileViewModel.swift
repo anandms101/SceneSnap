@@ -18,6 +18,18 @@ class ProfileViewModel: ObservableObject {
     func fetchUserProfile(userId: String) {
         isLoading = true
         // TODO: Call FirestoreService
+        // For now, create a mock user if it's the current user
+        if userId == AppState.shared.currentUser?.id {
+            self.user = AppState.shared.currentUser
+        } else {
+            // Create a mock user for other users
+            self.user = User(
+                id: userId,
+                fullName: "User \(userId.prefix(8))",
+                email: "user@example.com",
+                username: "user\(userId.prefix(8))"
+            )
+        }
         isLoading = false
     }
     
